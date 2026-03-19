@@ -1,9 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { io } from 'socket.io-client';
-
-const SOCKET_URL = window.location.hostname === 'localhost' ? 'http://localhost:3001' : undefined;
-const socket = io(SOCKET_URL);
 
 const Home = () => {
     const [joinRoomId, setJoinRoomId] = useState('');
@@ -17,6 +13,7 @@ const Home = () => {
 
     const handleJoin = () => {
         if (!joinRoomId) return alert('請輸入房號');
+        if (!joinPassword) return alert('請輸入房門密碼才能進入唷！');
         // Actually for simplicity, we pass state and connect inside Room component
         // But checking if room exists is better. We'll verify inside Room component or here.
         // Let's just navigate to Room component and pass password via state.
@@ -33,7 +30,7 @@ const Home = () => {
         <div className="home-wrapper">
             <div className="glass-container">
                 <h2 className="title">
-                    羅茱組隊小工具 <span className="version">v3.1</span>
+                    羅茱組隊小工具 <span className="version">v1.6.1</span>
                 </h2>
                 
                 <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
@@ -69,13 +66,9 @@ const Home = () => {
                     <button className="btn-primary" onClick={handleCreate}>建立</button>
                 </div>
 
-                <div className="footer-links">
-                    <span>贊助作者</span>
-                    <span>中 ⇆ 英</span>
-                    <span>更新內容</span>
-                </div>
+
             </div>
-            <div className="copyright">Copyright © wuca.cc All Rights Reserved.</div>
+
         </div>
     );
 };

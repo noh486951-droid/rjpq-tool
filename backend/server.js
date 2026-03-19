@@ -42,7 +42,8 @@ io.on('connection', (socket) => {
         rooms[roomId] = {
             id: roomId,
             password: password || Math.floor(1000 + Math.random() * 9000).toString(),
-            grid: createEmptyGrid()
+            grid: createEmptyGrid(),
+            occupiedColors: {} // { orange: socketId, ... }
         };
         socket.join(roomId);
         callback({ success: true, roomId, room: rooms[roomId] });
@@ -61,19 +62,53 @@ io.on('connection', (socket) => {
     });
 
     socket.on('leave_room', ({ roomId }) => {
+        if (rooms[roomId]) {
+            // Unclaim color on leave
+            Object.keys(rooms[roomId].occupiedColors).forEach(c => {
+                if (rooms[roomId].occupiedColors[c] === socket.id) {
+                    delete rooms[roomId].occupiedColors[c];
+                }
+            });
+            io.to(roomId).emit('color_status_update', rooms[roomId].occupiedColors);
+        }
         socket.leave(roomId);
+    });
+
+    socket.on('claim_color', ({ roomId, color }) => {
+        if (rooms[roomId]) {
+            const occ = rooms[roomId].occupiedColors;
+            // Unclaim previous color of this socket
+            Object.keys(occ).forEach(c => {
+                if (occ[c] === socket.id) delete occ[c];
+            });
+            
+            if (color && !occ[color]) {
+                occ[color] = socket.id;
+            }
+            io.to(roomId).emit('color_status_update', occ);
+        }
     });
 
     socket.on('update_cell', ({ roomId, row, col, color }) => {
         if (rooms[roomId]) {
-            // Toggle logic or overwrite logic? 
-            // In typical RJPQ tools, clicking a marked cell removes it if it's the same color.
-            if (rooms[roomId].grid[row][col] === color) {
-                rooms[roomId].grid[row][col] = null;
-            } else {
-                rooms[roomId].grid[row][col] = color;
+            const grid = rooms[roomId].grid;
+            // Prevent overwriting someone else's color
+            if (grid[row][col] && grid[row][col] !== color) {
+                return;
             }
-            io.to(roomId).emit('grid_update', rooms[roomId].grid);
+
+            if (grid[row][col] === color) {
+                grid[row][col] = null;
+            } else {
+                // Enforce: one color can only be in one column per row
+                for (let c = 0; c < 4; c++) {
+                    if (grid[row][c] === color) {
+                        grid[row][c] = null;
+                    }
+                }
+                grid[row][col] = color;
+            }
+            io.to(roomId).emit('grid_update', grid);
         }
     });
 
@@ -95,12 +130,28 @@ io.on('connection', (socket) => {
         }
     });
 
+
+
     socket.on('disconnect', () => {
         console.log('User disconnected:', socket.id);
+        // Find all rooms this socket was in and unclaim their color
+        Object.keys(rooms).forEach(roomId => {
+            const occ = rooms[roomId].occupiedColors;
+            let updated = false;
+            Object.keys(occ).forEach(c => {
+                if (occ[c] === socket.id) {
+                    delete occ[c];
+                    updated = true;
+                }
+            });
+            if (updated) {
+                io.to(roomId).emit('color_status_update', occ);
+            }
+        });
     });
 });
 
-app.get('*', (req, res) => {
+app.use((req, res) => {
     res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
 });
 

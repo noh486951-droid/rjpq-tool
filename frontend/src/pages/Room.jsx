@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { io } from 'socket.io-client';
-import { Copy, LogOut, PaintRoller, Glasses, Check } from 'lucide-react';
+import { Copy, LogOut, PaintRoller, Bell, Check, ClipboardType, User } from 'lucide-react';
 
 const SOCKET_URL = window.location.hostname === 'localhost' ? 'http://localhost:3001' : undefined;
 const socket = io(SOCKET_URL);
@@ -15,6 +15,7 @@ const Room = () => {
     
     const [roomData, setRoomData] = useState(null);
     const [selectedColor, setSelectedColor] = useState('orange');
+    const [occupiedColors, setOccupiedColors] = useState({}); // { orange: 'socketId', ... }
     const [error, setError] = useState('');
 
     useEffect(() => {
@@ -26,8 +27,11 @@ const Room = () => {
             socket.emit('create_room', { password }, (res) => {
                 if (res.success) {
                     setRoomData(res.room);
-                    // Update URL silently if possible, but for simplicity we rely on state
-                    // It's better to replace the URL to the new room ID
+                    setOccupiedColors(res.room.occupiedColors || {});
+                    // Initially claim orange if free
+                    if (!res.room.occupiedColors?.orange) {
+                        socket.emit('claim_color', { roomId: res.roomId, color: 'orange' });
+                    }
                     navigate(`/room/${res.roomId}`, { replace: true, state: { password: res.room.password, isJoined: true } });
                 }
             });
@@ -54,8 +58,13 @@ const Room = () => {
             setRoomData(prev => prev ? { ...prev, grid: newGrid } : null);
         });
 
+        socket.on('color_status_update', (occ) => {
+            setOccupiedColors(occ);
+        });
+
         return () => {
             socket.off('grid_update');
+            socket.off('color_status_update'); // Add cleanup for color_status_update
             socket.emit('leave_room', { roomId: roomData?.id || roomId });
         };
     }, [roomId, location.state, navigate]);
@@ -63,12 +72,43 @@ const Room = () => {
     if (error) return <div className="room-wrapper"><h3 style={{color:'white'}}>Error joining room</h3></div>;
     if (!roomData) return <div className="room-wrapper"><h3 style={{color:'white'}}>載入中...</h3></div>;
 
+    const handleColorSelect = (color) => {
+        // If color is taken by someone else, alert
+        if (occupiedColors[color] && occupiedColors[color] !== socket.id) {
+            alert('這個顏色已經有人在那裡囉！');
+            return;
+        }
+        setSelectedColor(color);
+        socket.emit('claim_color', { roomId: roomData.id, color });
+    };
+
     const handleCellClick = (row, col) => {
+        // Optimistic update for better UX (optional but helps if server is laggy)
+        // For now, we mainly need the backend to process it. 
+        // Let's ensure the user is pushing the code.
         socket.emit('update_cell', { roomId: roomData.id, row, col, color: selectedColor });
     };
 
     const handleClearColor = () => {
         socket.emit('clear_color', { roomId: roomData.id, color: selectedColor });
+    };
+
+    const handleCopyUnfilled = () => {
+        // Collect indices of null cells for each row 1 to 10
+        let result = '';
+        for (let r = 1; r <= 10; r++) {
+            const row = roomData.grid[r];
+            const unfilled = [];
+            row.forEach((cell, idx) => {
+                if (cell === null) unfilled.push(idx + 1);
+            });
+            // If multiple unfilled, we can join them or just take the first. 
+            // User requested something like 14512... which implies 1 digit per row.
+            result += unfilled.length > 0 ? unfilled[0] : 'X'; 
+            if (r === 5) result += ' '; // Add a space for readability as requested 14512 21432
+        }
+        navigator.clipboard.writeText(result);
+        alert(`已複製未選格子：${result}\n(這通常是給第四位不在線的人參考用的)`);
     };
 
     const copyRoomInfo = () => {
@@ -98,11 +138,12 @@ const Room = () => {
                         {colors.map(c => (
                             <button 
                                 key={c}
-                                className={`color-btn ${selectedColor === c ? 'selected' : ''}`}
+                                className={`color-btn ${selectedColor === c ? 'selected' : ''} ${occupiedColors[c] && occupiedColors[c] !== socket.id ? 'occupied' : ''}`}
                                 style={{ backgroundColor: `var(--color-${c})` }}
-                                onClick={() => setSelectedColor(c)}
+                                onClick={() => handleColorSelect(c)}
                             >
                                 {selectedColor === c && <Check color="white" size={36} />}
+                                {occupiedColors[c] && occupiedColors[c] !== socket.id && <User color="rgba(0,0,0,0.4)" size={32} />}
                             </button>
                         ))}
                     </div>
@@ -116,8 +157,8 @@ const Room = () => {
                     <button className="btn-clear" onClick={handleClearColor} title={`清除所有 ${selectedColor} 標記`}>
                         <PaintRoller size={30} />
                     </button>
-                    <button className="btn-view" title="檢視切換">
-                        <Glasses size={30} />
+                    <button className="btn-view" onClick={handleCopyUnfilled} style={{backgroundColor: '#6c5ce7'}} title="複製未選取格子 (3人團適用)">
+                        <ClipboardType size={30} />
                     </button>
                 </div>
 
@@ -130,7 +171,7 @@ const Room = () => {
                                 <button 
                                     key={col}
                                     className="grid-cell"
-                                    style={{ backgroundColor: cellColor ? `var(--color-${cellColor})` : undefined, color: cellColor ? 'transparent' : 'white' }}
+                                    style={{ backgroundColor: cellColor ? `var(--color-${cellColor})` : undefined, color: 'white' }}
                                     onClick={() => handleCellClick(row, col)}
                                 >
                                     {col + 1}
@@ -141,7 +182,7 @@ const Room = () => {
                 </div>
 
             </div>
-            <div className="copyright">Copyright © wuca.cc All Rights Reserved.</div>
+
         </div>
     );
 };

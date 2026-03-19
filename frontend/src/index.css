@@ -1,18 +1,20 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
 
 :root {
-  --bg-color: #1a1a1c;
-  --glass-bg: #2d2d34;
-  --primary: #00b48a;
-  --primary-hover: #009975;
+  --bg-color: #0f0f12;
+  --bg-gradient: radial-gradient(circle at top right, #1a1a2e, #0f0f12);
+  --glass-bg: rgba(30, 30, 40, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --primary: #00d2ff;
+  --primary-hover: #00b4db;
   --text-main: #ffffff;
-  --text-sub: #b3b3b3;
-  --btn-red: #A33B3B;
+  --text-sub: #888899;
+  --btn-red: #ff4b2b;
 
-  --color-orange: #d35400;
-  --color-green: #2ecc71;
-  --color-blue: #3498db;
-  --color-pink: #ffb8b8;
+  --color-orange: #ff9f43;
+  --color-green: #1dd1a1;
+  --color-blue: #54a0ff;
+  --color-pink: #ff9ff3;
 }
 
 * {
@@ -23,12 +25,14 @@
 
 body {
   font-family: 'Noto Sans TC', sans-serif;
-  background-color: var(--bg-color);
+  background: var(--bg-gradient);
+  background-attachment: fixed;
   color: var(--text-main);
   display: flex;
   justify-content: center;
   align-items: center;
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 button {
@@ -55,11 +59,13 @@ input:focus {
 
 .glass-container {
   background: var(--glass-bg);
-  border-radius: 12px;
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
   padding: 40px 30px;
   width: 90vw;
-  max-width: 500px;
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+  max-width: 450px;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
 }
 
 .title {
@@ -130,9 +136,7 @@ input:focus {
 }
 
 .copyright {
-  margin-top: 15px;
-  font-size: 12px;
-  color: #777;
+  display: none;
 }
 
 /* Room Page */
@@ -144,14 +148,16 @@ input:focus {
 
 .room-container {
   background: var(--glass-bg);
-  border-radius: 12px;
-  padding: 25px;
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  border-radius: 24px;
+  padding: 20px;
   width: 95vw;
-  max-width: 500px;
+  max-width: 480px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+  gap: 15px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
 }
 
 .room-header {
@@ -198,30 +204,47 @@ input:focus {
 
 .color-palette {
   display: flex;
+  justify-content: center;
   gap: 12px;
-  background: #1a1a1c;
-  padding: 12px 18px;
-  border-radius: 10px;
-  align-items: center;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 15px;
+  border-radius: 16px;
 }
 
 .color-btn {
-  flex: 1;
-  height: 85px;
-  border-radius: 16px;
-  opacity: 0.8;
-  border: 2px solid transparent;
+  width: 75px;
+  height: 75px;
+  border-radius: 15px;
+  opacity: 1;
+  border: 4px solid transparent;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+}
+
+.color-btn:hover {
+  transform: translateY(-8px);
+  filter: brightness(1.15);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+}
+
+.color-btn.occupied {
+  cursor: not-allowed;
+  filter: grayscale(0.5) brightness(0.7);
+  box-shadow: none;
+}
+
+.color-btn.occupied:hover {
+  transform: none;
 }
 
 .color-btn.selected {
-  border: 2px solid white;
-  transform: scale(1.1);
-  box-shadow: 0 0 10px rgba(255,255,255,0.4);
-  opacity: 1;
+  border: 4px solid white;
+  transform: scale(1.1) translateY(-8px);
+  box-shadow: 0 0 25px currentColor;
   z-index: 2;
 }
 
@@ -255,34 +278,77 @@ input:focus {
 .grid-section {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .grid-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: #1a1a1c;
-  padding: 8px;
-  border-radius: 8px;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 6px;
+  border-radius: 10px;
 }
 
 .row-label {
-  width: 45px;
+  width: 35px;
   text-align: center;
   font-weight: bold;
-  font-size: 20px;
+  font-size: 16px;
+  color: var(--text-sub);
 }
 
 .grid-cell {
   flex: 1;
-  height: 45px;
-  background: #555;
+  height: 40px;
+  background: #2a2a35;
+  border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 8px;
   color: white;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: bold;
-  transition: background 0.2s, transform 0.1s;
+  transition: all 0.2s;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}
+
+.grid-cell:hover {
+  background: #3a3a45;
+}
+
+/* Mobile Responsive */
+@media (max-width: 450px) {
+  .glass-container, .room-container {
+    padding: 15px;
+    gap: 12px;
+  }
+
+  .room-details span {
+    font-size: 16px;
+  }
+
+  .color-btn {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+  }
+
+  .row-label {
+    width: 30px;
+    font-size: 14px;
+  }
+
+  .grid-cell {
+    height: 35px;
+    font-size: 16px;
+  }
+
+  .action-row button {
+    padding: 12px 15px;
+  }
+
+  .title {
+    font-size: 24px;
+  }
 }
 
 .grid-cell:hover {
