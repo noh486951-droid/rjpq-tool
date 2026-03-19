@@ -1,12 +1,12 @@
 {
   "name": "rjpq-tool",
-  "version": "1.0.0",
+  "version": "1.6.1",
   "description": "RJPQ Tool Web Application",
   "main": "backend/server.js",
   "scripts": {
-    "install:all": "cd frontend && npm install && cd ../backend && npm install",
-    "build": "cd frontend && npm run build",
-    "start": "cd backend && node server.js"
+    "install:all": "npm install --prefix frontend && npm install --prefix backend",
+    "build": "npm run build --prefix frontend",
+    "start": "node backend/server.js"
   },
   "engines": {
     "node": ">=18.0.0"
