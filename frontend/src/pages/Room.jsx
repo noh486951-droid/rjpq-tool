@@ -69,6 +69,15 @@ const Room = () => {
         };
     }, [roomId, location.state, navigate]);
 
+    // Heartbeat to keep Render awake (every 5 minutes)
+    useEffect(() => {
+        const interval = setInterval(() => {
+            console.log('Heartbeat: Pinging server to stay awake...');
+            fetch('/api/ping').catch(err => console.error('Heartbeat failed:', err));
+        }, 1000 * 60 * 5); // 5 minutes
+        return () => clearInterval(interval);
+    }, []);
+
     if (error) return <div className="room-wrapper"><h3 style={{color:'white'}}>Error joining room</h3></div>;
     if (!roomData) return <div className="room-wrapper"><h3 style={{color:'white'}}>載入中...</h3></div>;
 

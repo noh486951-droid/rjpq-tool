@@ -9,6 +9,10 @@ app.use(cors());
 
 app.use(express.static(path.join(__dirname, '../frontend/dist')));
 
+app.get('/api/ping', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
