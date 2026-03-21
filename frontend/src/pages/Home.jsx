@@ -30,7 +30,7 @@ const Home = () => {
         <div className="home-wrapper">
             <div className="glass-container">
                 <h2 className="title">
-                    羅茱組隊小工具 <span className="version">v1.6.2</span>
+                    羅茱組隊小工具 <span className="version">v1.6.3</span>
                 </h2>
                 
                 <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
@@ -77,7 +77,7 @@ const Home = () => {
                 lineHeight: '1.6',
                 maxWidth: '300px',
             }}>
-                本工具僅供《新楓之谷》遊戲交流使用，純屬非營利性質，與任何商業行為無關。
+                本工具僅供《Artale》遊戲交流使用，純屬非營利性質，與任何商業行為無關。
             </p>
 
         </div>
