@@ -23,6 +23,14 @@ const io = new Server(server, {
 
 const rooms = {};
 
+// Maps socketId -> { roomId, userId }
+const socketMeta = {};
+
+// Grace-period timers for disconnected users
+const disconnectTimers = {};
+
+const DISCONNECT_GRACE_MS = 30 * 1000; // 30 seconds
+
 const generateRoomId = () => {
     let id;
     do { id = Math.floor(100000 + Math.random() * 900000).toString(); } while (rooms[id]);
@@ -32,28 +40,42 @@ const generateRoomId = () => {
 const createEmptyGrid = () => {
     const grid = {};
     for (let i = 1; i <= 10; i++) {
-        // [1, 2, 3, 4] columns
         grid[i] = [null, null, null, null];
     }
     return grid;
 };
 
+// Remove a userId's color claim from a room and broadcast
+const unclaimColor = (roomId, userId) => {
+    const room = rooms[roomId];
+    if (!room) return;
+    let changed = false;
+    Object.keys(room.occupiedColors).forEach(c => {
+        if (room.occupiedColors[c] === userId) {
+            delete room.occupiedColors[c];
+            changed = true;
+        }
+    });
+    if (changed) io.to(roomId).emit('color_status_update', room.occupiedColors);
+};
+
 io.on('connection', (socket) => {
     console.log('User connected:', socket.id);
 
-    socket.on('create_room', ({ password }, callback) => {
+    socket.on('create_room', ({ password, userId }, callback) => {
         const roomId = generateRoomId();
         rooms[roomId] = {
             id: roomId,
             password: password || Math.floor(1000 + Math.random() * 9000).toString(),
             grid: createEmptyGrid(),
-            occupiedColors: {} // { orange: socketId, ... }
+            occupiedColors: {} // { color: userId }
         };
+        socketMeta[socket.id] = { roomId, userId };
         socket.join(roomId);
         callback({ success: true, roomId, room: rooms[roomId] });
     });
 
-    socket.on('join_room', ({ roomId, password }, callback) => {
+    socket.on('join_room', ({ roomId, password, userId }, callback) => {
         const room = rooms[roomId];
         if (!room) {
             return callback({ success: false, message: '找不到該房間' });
@@ -61,97 +83,84 @@ io.on('connection', (socket) => {
         if (room.password !== password) {
             return callback({ success: false, message: '房號或密碼錯誤' });
         }
+        // Cancel any pending disconnect cleanup for this user
+        const timerKey = `${roomId}:${userId}`;
+        if (disconnectTimers[timerKey]) {
+            clearTimeout(disconnectTimers[timerKey]);
+            delete disconnectTimers[timerKey];
+        }
+        socketMeta[socket.id] = { roomId, userId };
         socket.join(roomId);
         callback({ success: true, room });
     });
 
-    socket.on('leave_room', ({ roomId }) => {
-        if (rooms[roomId]) {
-            // Unclaim color on leave
-            Object.keys(rooms[roomId].occupiedColors).forEach(c => {
-                if (rooms[roomId].occupiedColors[c] === socket.id) {
-                    delete rooms[roomId].occupiedColors[c];
-                }
-            });
-            io.to(roomId).emit('color_status_update', rooms[roomId].occupiedColors);
+    socket.on('leave_room', ({ roomId, userId }) => {
+        const room = rooms[roomId];
+        if (room && userId) {
+            unclaimColor(roomId, userId);
         }
         socket.leave(roomId);
+        delete socketMeta[socket.id];
     });
 
-    socket.on('claim_color', ({ roomId, color }) => {
-        if (rooms[roomId]) {
-            const occ = rooms[roomId].occupiedColors;
-            // Unclaim previous color of this socket
-            Object.keys(occ).forEach(c => {
-                if (occ[c] === socket.id) delete occ[c];
-            });
-            
-            if (color && !occ[color]) {
-                occ[color] = socket.id;
-            }
-            io.to(roomId).emit('color_status_update', occ);
+    socket.on('claim_color', ({ roomId, color, userId }) => {
+        const room = rooms[roomId];
+        if (!room || !userId) return;
+        const occ = room.occupiedColors;
+        // Unclaim any previous color this userId held
+        Object.keys(occ).forEach(c => {
+            if (occ[c] === userId) delete occ[c];
+        });
+        if (color && !occ[color]) {
+            occ[color] = userId;
         }
+        io.to(roomId).emit('color_status_update', occ);
     });
 
     socket.on('update_cell', ({ roomId, row, col, color }) => {
-        if (rooms[roomId]) {
-            const grid = rooms[roomId].grid;
-            // Prevent overwriting someone else's color
-            if (grid[row][col] && grid[row][col] !== color) {
-                return;
+        const room = rooms[roomId];
+        if (!room) return;
+        const grid = room.grid;
+        if (grid[row][col] && grid[row][col] !== color) return;
+        if (grid[row][col] === color) {
+            grid[row][col] = null;
+        } else {
+            for (let c = 0; c < 4; c++) {
+                if (grid[row][c] === color) grid[row][c] = null;
             }
-
-            if (grid[row][col] === color) {
-                grid[row][col] = null;
-            } else {
-                // Enforce: one color can only be in one column per row
-                for (let c = 0; c < 4; c++) {
-                    if (grid[row][c] === color) {
-                        grid[row][c] = null;
-                    }
-                }
-                grid[row][col] = color;
-            }
-            io.to(roomId).emit('grid_update', grid);
+            grid[row][col] = color;
         }
+        io.to(roomId).emit('grid_update', grid);
     });
 
     socket.on('clear_color', ({ roomId, color }) => {
-        if (rooms[roomId]) {
-            const grid = rooms[roomId].grid;
-            let updated = false;
-            for (let r = 1; r <= 10; r++) {
-                for (let c = 0; c < 4; c++) {
-                    if (grid[r][c] === color) {
-                        grid[r][c] = null;
-                        updated = true;
-                    }
-                }
-            }
-            if (updated) {
-                io.to(roomId).emit('grid_update', grid);
+        const room = rooms[roomId];
+        if (!room) return;
+        const grid = room.grid;
+        let updated = false;
+        for (let r = 1; r <= 10; r++) {
+            for (let c = 0; c < 4; c++) {
+                if (grid[r][c] === color) { grid[r][c] = null; updated = true; }
             }
         }
+        if (updated) io.to(roomId).emit('grid_update', grid);
     });
-
-
 
     socket.on('disconnect', () => {
         console.log('User disconnected:', socket.id);
-        // Find all rooms this socket was in and unclaim their color
-        Object.keys(rooms).forEach(roomId => {
-            const occ = rooms[roomId].occupiedColors;
-            let updated = false;
-            Object.keys(occ).forEach(c => {
-                if (occ[c] === socket.id) {
-                    delete occ[c];
-                    updated = true;
-                }
-            });
-            if (updated) {
-                io.to(roomId).emit('color_status_update', occ);
+        const meta = socketMeta[socket.id];
+        if (meta) {
+            const { roomId, userId } = meta;
+            delete socketMeta[socket.id];
+            // Start grace period before releasing their color
+            const timerKey = `${roomId}:${userId}`;
+            if (!disconnectTimers[timerKey]) {
+                disconnectTimers[timerKey] = setTimeout(() => {
+                    unclaimColor(roomId, userId);
+                    delete disconnectTimers[timerKey];
+                }, DISCONNECT_GRACE_MS);
             }
-        });
+        }
     });
 });
 

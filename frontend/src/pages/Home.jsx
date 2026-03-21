@@ -69,6 +69,17 @@ const Home = () => {
 
             </div>
 
+            <p style={{
+                marginTop: '16px',
+                fontSize: '11px',
+                color: 'rgba(255,255,255,0.45)',
+                textAlign: 'center',
+                lineHeight: '1.6',
+                maxWidth: '300px',
+            }}>
+                本工具僅供《新楓之谷》遊戲交流使用，純屬非營利性質，與任何商業行為無關。
+            </p>
+
         </div>
     );
 };
