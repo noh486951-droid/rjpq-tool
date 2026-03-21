@@ -14,35 +14,32 @@ const colors = ['orange', 'green', 'blue', 'pink']
 // Renders the interactive grid, with an optional compact/PiP mode style
 const GridView = ({ grid, selectedColor, onCellClick, compact = false }) => {
   if (!grid) return null
+
+  // In PiP (compact) mode the container fills whatever vertical space it has;
+  // each row gets an equal flex share, so resizing the PiP window scales everything.
+  const containerStyle = compact
+    ? { display: 'flex', flexDirection: 'column', gap: '3px', padding: '0 4px 4px', flex: 1, minHeight: 0 }
+    : { display: 'flex', flexDirection: 'column', gap: '6px' }
+
+  const rowStyle = compact
+    ? { display: 'flex', alignItems: 'stretch', gap: '3px', background: 'rgba(0,0,0,0.35)', padding: '2px 4px', borderRadius: '8px', flex: 1, minHeight: 0 }
+    : { display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(0,0,0,0.35)', padding: '6px', borderRadius: '10px' }
+
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: compact ? '4px' : '6px',
-        padding: compact ? '8px' : '0',
-      }}
-    >
+    <div style={containerStyle}>
       {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((row) => (
-        <div
-          key={row}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: compact ? '4px' : '6px',
-            background: 'rgba(0,0,0,0.35)',
-            padding: compact ? '4px 6px' : '6px',
-            borderRadius: '10px',
-          }}
-        >
+        <div key={row} style={rowStyle}>
           <span
             style={{
-              width: compact ? '22px' : '35px',
+              width: compact ? '18px' : '35px',
               textAlign: 'center',
               fontWeight: 'bold',
-              fontSize: compact ? '13px' : '16px',
+              fontSize: compact ? 'clamp(9px, 1.5vh, 13px)' : '16px',
               color: '#888899',
               flexShrink: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
             {row}
@@ -53,28 +50,26 @@ const GridView = ({ grid, selectedColor, onCellClick, compact = false }) => {
               onClick={() => onCellClick(row, col)}
               style={{
                 flex: 1,
-                height: compact ? '34px' : '40px',
+                height: compact ? '100%' : '40px',
+                minHeight: compact ? 0 : 'auto',
                 background: cellColor
-                  ? cellColor === 'orange'
-                    ? '#ff9f43'
-                    : cellColor === 'green'
-                      ? '#1dd1a1'
-                      : cellColor === 'blue'
-                        ? '#54a0ff'
-                        : '#ff9ff3'
+                  ? cellColor === 'orange' ? '#ff9f43'
+                  : cellColor === 'green' ? '#1dd1a1'
+                  : cellColor === 'blue' ? '#54a0ff'
+                  : '#ff9ff3'
                   : '#2a2a35',
                 border: cellColor === selectedColor
                   ? '2px solid rgba(255,255,255,0.9)'
                   : '1px solid rgba(255,255,255,0.07)',
-                borderRadius: '8px',
+                borderRadius: '6px',
                 color: 'white',
-                fontSize: compact ? '14px' : '18px',
+                fontSize: compact ? 'clamp(9px, 1.6vh, 14px)' : '18px',
                 fontWeight: 'bold',
                 fontFamily: 'inherit',
                 cursor: 'pointer',
                 transition: 'all 0.15s',
                 textShadow: '0 1px 3px rgba(0,0,0,0.5)',
-                boxShadow: cellColor ? `0 2px 8px rgba(0,0,0,0.4)` : 'none',
+                boxShadow: cellColor ? '0 2px 8px rgba(0,0,0,0.4)' : 'none',
               }}
             >
               {col + 1}
@@ -103,10 +98,13 @@ const PiPContent = ({ pipWin, grid, selectedColor, occupiedColors, onCellClick, 
         fontFamily: "'Noto Sans TC', 'Segoe UI', sans-serif",
         backgroundColor: '#0f0f12',
         background: 'radial-gradient(circle at top right, #1a1a2e, #0f0f12)',
-        minHeight: '100vh',
-        padding: '10px',
+        height: '100dvh',
+        padding: '8px',
         boxSizing: 'border-box',
         color: 'white',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
       }}
     >
       {/* Header strip */}
@@ -385,7 +383,10 @@ const Room = () => {
 
       // Reset body styles
       const baseStyle = pipWin.document.createElement('style')
-      baseStyle.textContent = `* { box-sizing: border-box; margin: 0; padding: 0; } body { overflow: hidden; }`
+      baseStyle.textContent = `
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { height: 100%; overflow: hidden; }
+      `
       pipWin.document.head.appendChild(baseStyle)
 
       setPipWindow(pipWin)
