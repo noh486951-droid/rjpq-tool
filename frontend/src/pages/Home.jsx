@@ -30,7 +30,7 @@ const Home = () => {
         <div className="home-wrapper">
             <div className="glass-container">
                 <h2 className="title">
-                    羅茱組隊小工具 <span className="version">v1.6.4</span>
+                    羅茱組隊小工具 <span className="version">v1.6.5</span>
                 </h2>
                 
                 <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>

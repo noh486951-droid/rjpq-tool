@@ -69,13 +69,7 @@ const GridView = ({ grid, selectedColor, onCellClick, compact = false }) => {
                 cursor: 'pointer',
                 transition: 'all 0.15s',
                 textShadow: '0 1px 3px rgba(0,0,0,0.5)',
-                boxShadow: cellColor === selectedColor
-                  ? cellColor === 'orange' ? '0 0 12px 3px #ff9f43'
-                  : cellColor === 'green' ? '0 0 12px 3px #1dd1a1'
-                  : cellColor === 'blue' ? '0 0 12px 3px #54a0ff'
-                  : '0 0 12px 3px #ff9ff3'
-                  : cellColor ? '0 2px 8px rgba(0,0,0,0.4)' : 'none',
-                animation: cellColor === selectedColor ? 'color-glow-pulse 1.4s ease-in-out infinite' : 'none',
+                boxShadow: cellColor ? '0 2px 8px rgba(0,0,0,0.4)' : 'none',
               }}
             >
               {col + 1}
