@@ -69,7 +69,13 @@ const GridView = ({ grid, selectedColor, onCellClick, compact = false }) => {
                 cursor: 'pointer',
                 transition: 'all 0.15s',
                 textShadow: '0 1px 3px rgba(0,0,0,0.5)',
-                boxShadow: cellColor ? '0 2px 8px rgba(0,0,0,0.4)' : 'none',
+                boxShadow: cellColor === selectedColor
+                  ? cellColor === 'orange' ? '0 0 12px 3px #ff9f43'
+                  : cellColor === 'green' ? '0 0 12px 3px #1dd1a1'
+                  : cellColor === 'blue' ? '0 0 12px 3px #54a0ff'
+                  : '0 0 12px 3px #ff9ff3'
+                  : cellColor ? '0 2px 8px rgba(0,0,0,0.4)' : 'none',
+                animation: cellColor === selectedColor ? 'color-glow-pulse 1.4s ease-in-out infinite' : 'none',
               }}
             >
               {col + 1}
@@ -438,7 +444,7 @@ const Room = () => {
         <div className="action-row">
           <button className="btn-leave" onClick={() => navigate('/')} title="退出房間"><LogOut size={30} /></button>
           <button className="btn-clear" onClick={handleClearColor} title={`清除所有 ${selectedColor} 標記`}><PaintRoller size={30} /></button>
-          <button className="btn-view" onClick={handleCopyUnfilled} style={{ backgroundColor: '#6c5ce7' }} title="複製未選取格子"><ClipboardType size={30} /></button>
+          <button className="btn-view" onClick={() => handleCopyUnfilled()} style={{ backgroundColor: '#6c5ce7' }} title="複製未選取格子"><ClipboardType size={30} /></button>
           {pipSupported && (
             <button
               className="btn-view"
