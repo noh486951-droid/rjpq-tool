@@ -200,7 +200,7 @@ const PiPContent = ({ pipWin, grid, selectedColor, occupiedColors, onCellClick, 
           <PaintRoller size={15} /> 清除
         </button>
         <button
-          onClick={onCopyUnfilled}
+          onClick={() => onCopyUnfilled(pipWin)}
           title="複製第4人未選格子"
           style={{
             flex: 1,
@@ -339,18 +339,16 @@ const Room = () => {
     if (roomData) socket.emit('clear_color', { roomId: roomData.id, color: selectedColor })
   }
 
-  const handleCopyUnfilled = () => {
-    // Find the 4th player's color: the color not currently claimed by anyone in occupiedColors
+  // win: the window whose clipboard & alert to use (main page or PiP window)
+  const handleCopyUnfilled = (win = window) => {
     const fourthColor = colors.find((c) => !occupiedColors[c])
     let result = ''
     for (let r = 1; r <= 10; r++) {
       const row = roomData.grid[r] || []
       const unfilled = row.map((c, i) => (c === null ? i + 1 : null)).filter(Boolean)
       if (unfilled.length > 0) {
-        // Normal case: one empty slot → that's the 4th person's spot
         result += unfilled[0]
       } else if (fourthColor) {
-        // All slots filled: find where the 4th color is (the 4th person already placed there)
         const col = row.findIndex((c) => c === fourthColor)
         result += col >= 0 ? col + 1 : '?'
       } else {
@@ -358,8 +356,16 @@ const Room = () => {
       }
       if (r === 5) result += ' '
     }
-    navigator.clipboard.writeText(result)
-    alert(`已複製未選格子：${result}`)
+    win.navigator.clipboard.writeText(result).catch(() => {
+      // Fallback: use textarea trick if clipboard API unavailable
+      const el = win.document.createElement('textarea')
+      el.value = result
+      win.document.body.appendChild(el)
+      el.select()
+      win.document.execCommand('copy')
+      win.document.body.removeChild(el)
+    })
+    win.alert(`已複製未選格子：${result}`)
   }
 
   const copyRoomInfo = () => {

@@ -246,6 +246,13 @@ input:focus {
   transform: scale(1.1) translateY(-8px);
   box-shadow: 0 0 25px currentColor;
   z-index: 2;
+  animation: color-glow-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes color-glow-pulse {
+  0%   { box-shadow: 0 0 10px 2px currentColor; }
+  50%  { box-shadow: 0 0 28px 8px currentColor; }
+  100% { box-shadow: 0 0 10px 2px currentColor; }
 }
 
 .action-row {
